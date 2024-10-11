@@ -1,6 +1,7 @@
+import { transform } from 'ol/proj'
+
 export default class {
   constructor() {
-    super(...arguments)
   }
   guid = () => {
     var S4 = () => {
@@ -22,10 +23,10 @@ export default class {
   }
 
   geoToPro = (geo) => {
-    return transform([geo.lat, geo.long], 'EPSG:4326', 'EPSG:3857')
+    return transform(geo, 'EPSG:4326', 'EPSG:3857')
   }
 
   proToGeo = (pro) => {
-    transform([pro.lat, pro.long], 'EPSG:3857', 'EPSG:4326')
+    transform(pro, 'EPSG:3857', 'EPSG:4326')
   }
 }

@@ -8,7 +8,7 @@ export default class extends BaseLayer {
     this.layers = {}
   }
 
-  createLayer = (zIndex, opacity, visible, id) => {
+  createLayer = ({ zIndex = 1, opacity = 1, visible = true, id }) => {
     let source = new Source()
     let layer = new Vector({
       zIndex,
@@ -27,6 +27,15 @@ export default class extends BaseLayer {
       return { code: 400, msg: '图层不存在' }
     }
     layer.setVisible(visible)
+    return { code: 200, msg: 'success' }
+  }
+
+  clearLayer = (layerId) => {
+    let layer = this.layers[layerId]
+    if (!layer) {
+      return { code: 400, msg: '图层不存在' }
+    }
+    this.layers[layerId].getSource().clear()
     return { code: 200, msg: 'success' }
   }
 }

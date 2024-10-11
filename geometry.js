@@ -1,5 +1,5 @@
 import { Feature } from 'ol'
-import { Point } from 'ol/geom'
+import { Point, LineString } from 'ol/geom'
 import { Style, Icon, Stroke } from 'ol/style'
 
 import Base from './base'
@@ -32,27 +32,28 @@ export default class extends Base {
     return { code: 1, msg: '图层不存在，请先创建图层' }
   }
 
-  createLine = (options, layerId) => {
-    let { points, style } = options
-    let layer = this.layers[layerId]
+  createLine = ({ data, style = {}, layerId, goView }) => {
+    const layer = this.layers[layerId]
     if (!layer) {
       return { code: 1, msg: '图层不存在，请先创建图层' }
     }
-    let id = this.guid()
-    let source = layer.getSource()
-    let feature = new Feature({
+    const id = this.guid()
+    const source = layer.getSource()
+    const geometry = new LineString(data.map(i => this.geoToPro(i)))
+    const feature = new Feature({
       id,
-      geometry: new LineStringGeom(points),
+      geometry,
     })
-    let { width, color } = style
+    const { width = 4, color = '#00ff00' } = style
     feature.setStyle(
       new Style({
         stroke: new Stroke({
-          width: width || 1,
-          color: color || '#00fa00',
+          width: width,
+          color: color,
         }),
       })
     )
     source.addFeature(feature)
+    goView && this.map.getView().fit(geometry.getExtent())
   }
 }
