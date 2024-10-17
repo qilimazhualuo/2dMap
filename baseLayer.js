@@ -1,8 +1,8 @@
 import Tile from 'ol/layer/Tile'
 import { XYZ } from 'ol/source'
-import Geometry from './geometry'
+import Meature from './meature'
 
-export default class extends Geometry {
+export default class extends Meature {
   constructor() {
     super(...arguments)
     this.maps = {}
