@@ -3,6 +3,7 @@ import { Vector as LayerVector } from 'ol/layer'
 import { Modify, Draw } from 'ol/interaction'
 import { LineString, Point, Circle } from 'ol/geom'
 import { GeoJSON } from 'ol/format'
+import { Icon, Circle as StyleCircle, Stroke, Fill, Style } from 'ol/style'
 import Geometry from './geometry'
 
 export default class Measure extends Geometry {
@@ -11,6 +12,7 @@ export default class Measure extends Geometry {
     this._meatureLineCountLimit = undefined
     this._meatureDrawedCallBack = undefined
     this._meatureDraw = undefined
+    this._meatureDrawType = undefined
     this._meatureStyle = {
       strokeColor: 'rgba(24, 144, 255, 1)',
       img: undefined,
@@ -19,10 +21,11 @@ export default class Measure extends Geometry {
     }
     this._meatureSource = new SourceVector()
     this._meatureLayer = new LayerVector({ id: '_measure-layer', zIndex: 9, source: this._meatureSource })
+    this.map.addLayer(this._meatureLayer)
     this._meatureModify = new Modify({
       source: this._meatureSource,
       insertVertexCondition: () => {
-        if (drawTypeStore === 'LineString') {
+        if (this._meatureDrawType === 'LineString') {
           const feature = this._meatureSource.getFeatures()[0]
           const length = feature.getGeometry().getCoordinates().length
           if (length >= lineCountLimit) {
@@ -35,63 +38,93 @@ export default class Measure extends Geometry {
     this.map.addInteraction(this._meatureModify)
     this._meatureModify.on('modifyend', () => {
       if (this._meatureDrawedCallBack instanceof Function) {
-        this._meatureDrawedCallBack(getBufferFeature())
+        this._meatureDrawedCallBack(this.getMeatureGeojson())
       }
     })
   }
 
-  #styleFunction() {
+  #defaultStyle(styleTemp, style) {
+    styleTemp = Object.assign(styleTemp, style)
+    const { strokeColor, img, width, backgroundColor } = styleTemp
+    const image = img ? new Icon({
+      src: img,
+      offsetOrigin: 'bottom-right',
+      scale: 0.5,
+      size: [48, 144],
+      offset: [0, -72]
+    }) : new StyleCircle({
+      radius: 5,
+      stroke: new Stroke({
+        color: 'rgba(24, 144, 255, 1)'
+      }),
+      fill: new Fill({
+        color: '#f6ffed'
+      })
+    })
+    return new Style({
+      fill: new Fill({
+        color: backgroundColor || 'rgba(24, 144, 255, 0.2)'
+      }),
+      stroke: new Stroke({
+        color: strokeColor || 'rgba(24, 144, 255, 0.9)',
+        width: width || 3
+      }),
+      image
+    })
+  }
+
+  #styleFunction({ feature, style }) {
     const geometry = feature.getGeometry()
     const type = geometry.getType()
-    const styles = [ds.defaultStyle(styleTemp, this._meatureStyle, props.map)]
+    const styles = [this.#defaultStyle({}, this._meatureStyle, style)]
     const { showLine = true, showArea = true } = this._meatureStyle
     let point, label, line
     if (type === 'Polygon') {
-      label = props.map.formatArea(geometry)
+      label = this.map.formatArea(geometry)
       point = geometry.getInteriorPoint()
-      line = new ol.geom.LineString(geometry.getCoordinates()[0])
+      line = new LineString(geometry.getCoordinates()[0])
     }
     if (type === 'MultiPolygon') {
-      label = props.map.formatArea(geometry)
+      label = this.map.formatArea(geometry)
       point = geometry.getInteriorPoint()
-      line = new ol.geom.LineString(geometry.getCoordinates()[0])
+      line = new LineString(geometry.getCoordinates()[0])
     }
     if (type === 'Circle') {
-      label = props.map.formatArea(geometry.getRadius())
+      label = this.map.formatArea(geometry.getRadius())
       const coor = geometry.getCenter()
-      point = new ol.geom.Point(coor)
+      point = new Point(coor)
     }
     if (type === 'LineString') {
-      line = new ol.geom.LineString(geometry.getCoordinates())
+      line = new LineString(geometry.getCoordinates())
     }
     // 绘制多边形边长度
-    if (line && showLine) {
-      let count = 0
-      line.forEachSegment(function (a, b) {
-        const segment = new ol.geom.LineString([a, b])
-        const label = props.map.formatLength(segment)
-        if (segmentStyles.length - 1 < count) {
-          segmentStyles.push(segmentStyle.clone())
-        }
-        const segmentPoint = new ol.geom.Point(segment.getCoordinateAt(0.5))
-        segmentStyles[count].setGeometry(segmentPoint)
-        segmentStyles[count].getText().setText(label)
-        styles.push(segmentStyles[count])
-        count++
-      })
-    }
+    // if (line && showLine) {
+    //   let count = 0
+    //   line.forEachSegment((a, b) => {
+    //     const segment = new LineString([a, b])
+    //     const label = this.map.formatLength(segment)
+    //     if (segmentStyles.length - 1 < count) {
+    //       segmentStyles.push(segmentStyle.clone())
+    //     }
+    //     const segmentPoint = new Point(segment.getCoordinateAt(0.5))
+    //     segmentStyles[count].setGeometry(segmentPoint)
+    //     segmentStyles[count].getText().setText(label)
+    //     styles.push(segmentStyles[count])
+    //     count++
+    //   })
+    // }
     // 绘制面积
-    if (label && showArea) {
-      let labelStyle = ds.labelStyle()
-      labelStyle.setGeometry(point)
-      labelStyle.getText().setText(label)
-      styles.push(labelStyle)
-    }
-    if (type === 'Point') {
-      let tipStyle = ds.tipStyle()
-      tipStyle.getText().setText(tip)
-      styles.push(tipStyle)
-    }
+    // if (label && showArea) {
+    //   let labelStyle = ds.labelStyle()
+    //   labelStyle.setGeometry(point)
+    //   labelStyle.getText().setText(label)
+    //   styles.push(labelStyle)
+    // }
+    // if (type === 'Point') {
+    //   let tipStyle = ds.tipStyle()
+    //   tipStyle.getText().setText(tip)
+    //   styles.push(tipStyle)
+    // }
     if (type === 'Point' && !modify.getOverlay().getSource().getFeatures().length) {
       tipPoint = geometry
     }
@@ -99,6 +132,7 @@ export default class Measure extends Geometry {
   }
 
   draw(drawType, style = {}, clearBefore) {
+    this._meatureDrawType = drawType
     if (clearBefore) {
       this.clearMeature()
     }
@@ -148,7 +182,7 @@ export default class Measure extends Geometry {
       this.map.once('pointermove', () => {
         modifyStyle.setGeometry()
         if (this._meatureDrawedCallBack instanceof Function) {
-          this._meatureDrawedCallBack(getBufferFeature())
+          this._meatureDrawedCallBack(this.getMeatureGeojson())
         }
       })
       this.stopDrawShape()
@@ -162,7 +196,7 @@ export default class Measure extends Geometry {
     })
     this._meatureSource.addFeatures(features)
     this._meatureLayer.setStyle((feature) => {
-      return styleFunction({ feature, style })
+      return this.#styleFunction({ feature, style })
     })
     let displayRange = []
     features.forEach((feature, idx) => {
@@ -181,10 +215,14 @@ export default class Measure extends Geometry {
   }
 
   getMeatureGeojson() {
-    return new GeoJSON().writeFeatures(this._meatureSource.getFeatures(), {
+    return JSON.parse(new GeoJSON().writeFeatures(this._meatureSource.getFeatures(), {
       dataProjection: 'EPSG:4326',
       featureProjection: 'EPSG:3857',
-    })
+    }))
+  }
+
+  setMeatureCallBack(callback) {
+    this._meatureDrawedCallBack = callback
   }
 
   setStyle(style) {

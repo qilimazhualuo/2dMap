@@ -1,7 +1,7 @@
 import 'ol/ol.css'
-import Layer from './layer'
+import Event from './event'
 
-export default class extends Layer {
+export default class extends Event {
   constructor() {
     super(...arguments)
   }

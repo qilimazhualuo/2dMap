@@ -27,6 +27,6 @@ export default class {
   }
 
   proToGeo = (pro) => {
-    transform(pro, 'EPSG:3857', 'EPSG:4326')
+    return transform(pro, 'EPSG:3857', 'EPSG:4326')
   }
 }
