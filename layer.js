@@ -8,7 +8,7 @@ export default class extends BaseLayer {
         this.layers = {}
     }
 
-    createLayer = ({ zIndex = 1, opacity = 1, visible = true, id }) => {
+    createLayer = ({ zIndex = 1, opacity = 1, visible = true, id } = {}) => {
         let source = new Source()
         let layer = new Vector({
             zIndex,

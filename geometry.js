@@ -1,6 +1,6 @@
 import { Feature } from 'ol'
 import { Point, LineString } from 'ol/geom'
-import { Style, Icon, Stroke } from 'ol/style'
+import { Style, Icon, Stroke, Circle, Fill } from 'ol/style'
 
 import Base from './base'
 
@@ -12,7 +12,8 @@ export default class extends Base {
 
     createPoint = (options, layerId) => {
         // 拿到source
-        let { longitude, latitude, img, id = this.guid() } = options
+        let { longitude, latitude, img, radius = 5, fill = '#00ff00', strokeColor = '#00ff00', strokeWidth = 2, id = this.guid() } = options
+
         let layer = this.layers[layerId]
         if (layer) {
             let source = layer.getSource()
@@ -21,8 +22,17 @@ export default class extends Base {
                 geometry: new Point(this.geoToPro([longitude, latitude])),
             })
             let featureStyle = new Style({
-                image: new Icon({
+                image: img ? new Icon({
                     src: img,
+                }): new Circle({
+                    fill: new Fill({
+                        color: fill
+                    }),
+                    stroke: new Stroke({
+                        color: strokeColor,
+                        width: strokeWidth
+                    }),
+                    radius: radius
                 }),
             })
             feature.setStyle(featureStyle)
